@@ -14,7 +14,9 @@ async def main():
     settings = Settings()
     bot = t.Bot(settings.token)
     async with bot:
-        print(await bot.get_me())
+        await bot.send_message(text='Hi Flint!', chat_id=5263803387)
+        updates = (await bot.get_updates())[0]
+        print(updates)
 
 
 if __name__ == '__main__':
