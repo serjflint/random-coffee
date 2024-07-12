@@ -1,8 +1,8 @@
-import asyncio
 import logging
 
 import telegram as t
-import pydantic as p
+import telegram.ext as te
+import pydantic
 import pydantic_settings as ps
 
 logging.basicConfig(
@@ -13,17 +13,23 @@ logging.basicConfig(
 
 class Settings(ps.BaseSettings):
     model_config = ps.SettingsConfigDict(env_file='.env')
-    token: str = p.Field()
+    token: str = pydantic.Field()
+    
+    
+async def start(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 
-async def main():
+
+def main():
     settings = Settings()
-    bot = t.Bot(settings.token)
-    async with bot:
-        await bot.send_message(text='Hi Flint!', chat_id=5263803387)
-        updates = (await bot.get_updates())[0]
-        logging.info(updates)
+    application = te.ApplicationBuilder().token(settings.token).build()
+    
+    start_handler = te.CommandHandler('start', start)
+    application.add_handler(start_handler)
+    
+    application.run_polling()
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
