@@ -20,13 +20,19 @@ async def start(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 
+async def echo(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+
 
 def main():
     settings = Settings()
     application = te.ApplicationBuilder().token(settings.token).build()
     
     start_handler = te.CommandHandler('start', start)
+    echo_handler = te.MessageHandler(te.filters.TEXT & (~te.filters.COMMAND), echo)
+    
     application.add_handler(start_handler)
+    application.add_handler(echo_handler)
     
     application.run_polling()
 
