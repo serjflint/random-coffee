@@ -5,7 +5,8 @@ description = "Add your description here"
 dependencies = [
     "notebook>=7.2.1",
     "litestar[full]>=2.9.1",
-    "python-telegram-bot>=21.3",
+    "python-telegram-bot[all]>=21.3",
+    "pydantic-settings>=2.3.4",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
