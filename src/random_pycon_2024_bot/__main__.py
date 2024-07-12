@@ -1,8 +1,14 @@
 import asyncio
+import logging
 
 import telegram as t
 import pydantic as p
 import pydantic_settings as ps
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 
 class Settings(ps.BaseSettings):
@@ -16,7 +22,7 @@ async def main():
     async with bot:
         await bot.send_message(text='Hi Flint!', chat_id=5263803387)
         updates = (await bot.get_updates())[0]
-        print(updates)
+        logging.info(updates)
 
 
 if __name__ == '__main__':
