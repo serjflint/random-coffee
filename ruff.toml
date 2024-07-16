@@ -31,6 +31,12 @@ unfixable = []
 "test_*.py" = [
     "S101",  # Use of `assert` detected
 ]
+"messages.py" = [
+    "RUF001",  # cyrrilic
+]
+"handlers.py" = [
+    "S101",  # cyrrilic
+]
 
 [lint.pydocstyle]
 convention = "pep257"

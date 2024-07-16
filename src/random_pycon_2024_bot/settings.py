@@ -1,3 +1,5 @@
+import enum
+
 import pydantic
 import pydantic_settings as ps
 
@@ -12,3 +14,13 @@ class Settings(ps.BaseSettings):
 
 
 settings = Settings()
+
+
+@enum.unique
+class MeetingStatus(enum.StrEnum):
+    created = enum.auto()
+    showed = enum.auto()
+    asked = enum.auto()
+    yet = enum.auto()
+    done = enum.auto()
+    nope = enum.auto()

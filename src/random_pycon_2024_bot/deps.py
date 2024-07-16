@@ -35,14 +35,23 @@ def create_tg_app() -> te.Application:  # type: ignore[type-arg]
     application = te.ApplicationBuilder().token(settings.token).updater(None).context_types(context_types).build()
 
     start_handler = te.CommandHandler('start', handlers.start)
+    help_handler = te.CommandHandler('help', handlers.help_command)
+    helpadmin_handler = te.CommandHandler('helpadmin', handlers.admin_help_command)
+
     echo_handler = te.MessageHandler(te.filters.TEXT & (~te.filters.COMMAND), handlers.echo)
     inline_caps_handler = te.InlineQueryHandler(handlers.inline_caps)
+
+    webhook_handler = te.TypeHandler(type=models.WebhookUpdate, callback=handlers.webhook_update)
     unknown_handler = te.MessageHandler(te.filters.COMMAND, handlers.unknown)
 
     application.add_handler(start_handler)
+    application.add_handler(help_handler)
+    application.add_handler(helpadmin_handler)
+
     application.add_handler(echo_handler)  # type: ignore[arg-type]
+
     application.add_handler(inline_caps_handler)  # type: ignore[arg-type]
-    application.add_handler(te.TypeHandler(type=models.WebhookUpdate, callback=handlers.webhook_update))
+    application.add_handler(webhook_handler)
     application.add_handler(unknown_handler)  # type: ignore[arg-type]
 
     return application
