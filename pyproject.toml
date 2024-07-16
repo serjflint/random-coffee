@@ -10,7 +10,7 @@ dependencies = [
     "granian>=1.5.1",
 ]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.11"
 
 [build-system]
 requires = ["hatchling"]
@@ -18,10 +18,39 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = []
+dev-dependencies = [
+    "ruff>=0.5.2",
+    "uv>=0.2.25",
+    "mypy>=1.10.1",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/random_pycon_2024_bot"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = [
+  "pydantic.mypy"
+]
+
+follow_imports = "silent"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = true
+disallow_untyped_defs = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.rye.scripts]
+devserver = "uvicorn src.random_pycon_2024_bot.app:app --reload --host 0.0.0.0"
+server = "granian --interface asgi src.random_pycon_2024_bot.app:app --reload --host 0.0.0.0"

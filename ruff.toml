@@ -1,0 +1,62 @@
+target-version = "py311"
+line-length = 120
+cache-dir = "~/.cache/ruff"
+
+[format]
+preview=true
+quote-style="single"
+
+[lint]
+preview = true
+select = ["ALL"]
+
+ignore = [
+    "ANN101",
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D107",  # Missing docstring in `__init__`
+    "D200",  # One-line docstring should fit on one line
+    "COM812",  # ruff format
+    "ISC001",  # ruff format
+    "CPY001",  # Missing copyright notice at top of file
+    "PLR6301",  # Method could be a function, class method, or static method
+]
+
+unfixable = []
+
+[lint.per-file-ignores]
+"test_*.py" = [
+    "S101",  # Use of `assert` detected
+]
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[lint.isort]
+case-sensitive = false
+force-single-line = true
+force-sort-within-sections = true
+known-first-party = []
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "common",
+    "first-party",
+    "local-folder",
+]
+no-lines-before = [
+    "local-folder",
+]
+relative-imports-order = "closest-to-furthest"
+
+[lint.isort.sections]
+common = []
