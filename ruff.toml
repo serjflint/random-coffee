@@ -23,6 +23,8 @@ ignore = [
     "ISC001",  # ruff format
     "CPY001",  # Missing copyright notice at top of file
     "PLR6301",  # Method could be a function, class method, or static method
+    "TD003",  # Missing issue link on the line following this TODO
+    "FIX002",  # Line contains TODO, consider resolving the issue
 ]
 
 unfixable = []
@@ -35,7 +37,7 @@ unfixable = []
     "RUF001",  # cyrrilic
 ]
 "handlers.py" = [
-    "S101",  # cyrrilic
+    "ARG001",
 ]
 
 [lint.pydocstyle]

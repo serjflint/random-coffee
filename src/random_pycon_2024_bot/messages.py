@@ -1,3 +1,5 @@
+import typing as tp
+
 UNAUTHORIZED_MESSAGE = 'UNAUTHORIZED_MESSAGE'
 UNAUTHORIZED_MESSAGE_RU = UNAUTHORIZED_MESSAGE_EN = """
 (English version below)
@@ -324,7 +326,7 @@ NO_JOINT_INTERESTS = 'NO_JOINT_INTERESTS'
 NO_JOINT_INTERESTS_RU = 'Определенно были...)))'
 NO_JOINT_INTERESTS_EN = 'Interests were definitely....)))'
 
-MESSAGES = {
+MESSAGES: tp.Mapping[str, tp.Mapping[str, str]] = {
     UNAUTHORIZED_MESSAGE: {
         'en': UNAUTHORIZED_MESSAGE_EN,
         'ru': UNAUTHORIZED_MESSAGE_RU,
@@ -382,8 +384,8 @@ MESSAGES = {
         'ru': WHO_MESSAGE_RECORD_RU,
     },
     MEETING_STATUS_TEXTS: {
-        'en': MEETING_STATUS_TEXTS_EN,
-        'ru': MEETING_STATUS_TEXTS_RU,
+        'en': str(MEETING_STATUS_TEXTS_EN),
+        'ru': str(MEETING_STATUS_TEXTS_RU),
     },
     STATUS_UPDATE_MESSAGE: {
         'en': STATUS_UPDATE_MESSAGE_EN,
