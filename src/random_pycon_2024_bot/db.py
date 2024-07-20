@@ -11,12 +11,12 @@ Data = dict[str, tp.Any]
 UserData = dict[int, tp.Any]
 
 
-def get_user(_user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> Data:
-    return notnull(context.user_data)
-
-
 def get_users(context: te.ContextTypes.DEFAULT_TYPE) -> Data:
     return notnull(context.bot_data).setdefault('users', {})
+
+
+def get_user(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> Data:
+    return get_users(context).setdefault(user_id, {})
 
 
 def get_logins(context: te.ContextTypes.DEFAULT_TYPE) -> Data:
@@ -29,19 +29,19 @@ def get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[int, list[models
 
 
 def register(user_id: int, context: te.ContextTypes.DEFAULT_TYPE, message: t.Message) -> None:
-    user_record = get_user(user_id, context)
-    user_record['enabled'] = True
+    user = get_user(user_id, context)
     username = notnull(message.from_user).username
     chat_id = notnull(message.chat).id
-    credentials = {'username': username, 'chat_id': chat_id, 'user_id': user_id}
-    get_users(context)[user_id] = credentials
-    get_logins(context)[username] = credentials
+    user.update({'username': username, 'chat_id': chat_id, 'user_id': user_id, 'enabled': True})
+    get_users(context)[user_id] = user
+    get_logins(context)[username] = user
 
 
 def unregister(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
     user = get_user(user_id, context)
     if not user:
         return
+    user.clear()
     user['enabled'] = False
 
 

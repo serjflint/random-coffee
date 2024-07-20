@@ -176,6 +176,8 @@ async def add_command(message: t.Message, user_id: int, context: te.ContextTypes
 
 
 async def send_meeting(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+    if not db.get_user(user_id, context)['enabled']:
+        return
     await context.bot.send_message(
         chat_id=user_id,
         text=utils.get_message(messages.TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS, user_id=user_id, context=context),
