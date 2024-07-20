@@ -12,6 +12,10 @@ class MeetingStatus(enum.StrEnum):
     nope = enum.auto()
 
 
+PENDING_MEETINGS = {MeetingStatus.showed, MeetingStatus.asked, MeetingStatus.yet}
+ALL_MEETINGS = {*PENDING_MEETINGS, MeetingStatus.done, MeetingStatus.nope}
+
+
 @dataclasses.dataclass
 class WebhookUpdate:
     """Simple dataclass to wrap a custom update type."""
@@ -22,5 +26,5 @@ class WebhookUpdate:
 
 @dataclasses.dataclass
 class Meeting:
-    telegram_login: str
+    user_id: int
     status: MeetingStatus = dataclasses.field(default_factory=MeetingStatus)  # type: ignore[arg-type]

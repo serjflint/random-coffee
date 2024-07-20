@@ -25,6 +25,7 @@ ignore = [
     "PLR6301",  # Method could be a function, class method, or static method
     "TD003",  # Missing issue link on the line following this TODO
     "FIX002",  # Line contains TODO, consider resolving the issue
+    "ARG001",
 ]
 
 unfixable = []
@@ -37,7 +38,7 @@ unfixable = []
     "RUF001",  # cyrrilic
 ]
 "handlers.py" = [
-    "ARG001",
+    "RUF029",
 ]
 
 [lint.pydocstyle]

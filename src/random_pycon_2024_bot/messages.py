@@ -383,10 +383,6 @@ MESSAGES: tp.Mapping[str, tp.Mapping[str, str]] = {
         'en': WHO_MESSAGE_RECORD_EN,
         'ru': WHO_MESSAGE_RECORD_RU,
     },
-    MEETING_STATUS_TEXTS: {
-        'en': str(MEETING_STATUS_TEXTS_EN),
-        'ru': str(MEETING_STATUS_TEXTS_RU),
-    },
     STATUS_UPDATE_MESSAGE: {
         'en': STATUS_UPDATE_MESSAGE_EN,
         'ru': STATUS_UPDATE_MESSAGE_RU,
@@ -462,5 +458,16 @@ MESSAGES: tp.Mapping[str, tp.Mapping[str, str]] = {
     NEW_MEETING_MESSAGE: {
         'en': NEW_MEETING_MESSAGE_EN,
         'ru': NEW_MEETING_MESSAGE_RU,
+    },
+    TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS: {
+        'en': TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS_EN,
+        'ru': TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS_RU,
+    },
+}
+
+MULTI_MESSAGES: tp.Mapping[str, tp.Mapping[str, list[str]]] = {
+    MEETING_STATUS_TEXTS: {
+        'en': MEETING_STATUS_TEXTS_EN,
+        'ru': MEETING_STATUS_TEXTS_RU,
     },
 }
