@@ -22,11 +22,16 @@ def default_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignor
     return wrapper
 
 
-def command(name: str) -> tp.Callable:  # type: ignore[type-arg]
-    def wrapper(func: tp.Callable) -> te.CommandHandler:  # type: ignore[type-arg]
-        return te.CommandHandler(command=name, callback=func)
+class Command:
+    registry: tp.ClassVar[list[te.CommandHandler]] = []  # type: ignore[type-arg]
 
-    return wrapper
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __call__(self, func: tp.Callable) -> te.CommandHandler:  # type: ignore[type-arg]
+        command_handler = te.CommandHandler(command=self.name, callback=func)
+        self.registry.append(command_handler)
+        return command_handler
 
 
 def admin_handler(auth_handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
@@ -57,30 +62,54 @@ def markdown_handler(handler_command: tp.Callable) -> tp.Callable:  # type: igno
     return wrapper
 
 
-@command('help')
+def markdown_handler_kwargs(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
+    @default_handler
+    async def wrapper(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+        response_text, kwargs = handler_command(message, user_id=user_id, context=context)
+        await message.reply_markdown(
+            text=db.get_message(response_text, user_id=user_id, context=context).format(**kwargs),
+        )
+
+    return wrapper
+
+
+@Command('help')
 @markdown_handler
 def help_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
     return messages.HELP_SUCCESS_MESSAGE
 
 
-@command('helpadmin')
+@Command('helpadmin')
 @admin_handler
 def helpadmin_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
     return messages.ADMIN_HELP_MESSAGE
 
 
-@command('start')
+@Command('start')
 @markdown_handler
 def start_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
     db.register(user_id, context)
     return messages.START_SUCCESS_MESSAGE
 
 
-@command('stop')
+@Command('stop')
 @markdown_handler
 def stop_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
     db.unregister(user_id, context)
     return messages.STOP_SUCCESS_MESSAGE
+
+
+@Command('stats')
+@markdown_handler_kwargs
+def stats_command(
+    message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE
+) -> tuple[str, dict[str, int]]:
+    stats = db.get_user_stats(user_id, context)
+    success = stats.get(models.MeetingStatus.done, 0)
+    not_yet = stats.get(models.MeetingStatus.yet, 0)
+    deny = stats.get(models.MeetingStatus.nope, 0)
+    kwargs = {'success_m': success, 'not_yet_m': not_yet, 'deny_m': deny, 'all_m': sum(stats.values())}
+    return messages.STATS_MESSAGE, kwargs
 
 
 @markdown_handler
