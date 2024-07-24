@@ -3,6 +3,8 @@ import functools
 import logging
 import typing as tp
 
+import sqlalchemy as sa
+from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 import telegram as t
 import telegram.ext as te
 
@@ -96,3 +98,18 @@ def add_meeting(context: te.ContextTypes.DEFAULT_TYPE, left_id: str, right_id: s
     meetings.setdefault(str(left_id), []).append(left_meeting)
     right_meeting = models.CacheMeeting(user_id=left_id, status=models.MeetingStatus.created)
     meetings.setdefault(str(right_id), []).append(right_meeting)
+
+
+async def init_persistence(connection: sa.Connection) -> models.Data:
+    res = await connection.scalars(sa.select(models.Persistence.data))  # type: ignore[call-overload,misc]
+    return res.first() or models.Data()
+
+
+async def flush_persistence(session: tp.Any, data: models.Data) -> None:
+    stmt = sqlite_upsert(models.Persistence).values({'id': 1, 'data': data})
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[models.Persistence.id],  # type: ignore[list-item]
+        set_={'data': stmt.excluded.data},
+    )
+    await session.execute(stmt)
+    await session.commit()

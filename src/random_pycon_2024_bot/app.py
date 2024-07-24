@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 app = ls.Litestar(
     route_handlers=[controller.RootController],
-    lifespan=[deps.get_tg_app],
     plugins=[deps.db_plugin],
-    on_startup=[deps.init_db],
+    on_startup=[deps.init_db, deps.get_tg_app],
+    on_shutdown=[deps.close_tg_app],
 )

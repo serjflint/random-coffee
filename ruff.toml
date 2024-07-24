@@ -43,7 +43,7 @@ unfixable = []
 "controller.py" = [
     "TCH",  # typing is required at runtime for DI
 ]
-"persistence.py" = [
+"models.py" = [
     "ANN401",
 ]
 
