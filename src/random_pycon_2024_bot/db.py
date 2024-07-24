@@ -83,7 +83,7 @@ def get_user_stats(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> dict[
     return result
 
 
-def get_pending_meetings(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> list[models.CacheMeeting]:
+def get_pending_meetings(context: te.ContextTypes.DEFAULT_TYPE, user_id: int | str) -> list[models.CacheMeeting]:
     return get_user_meetings(context, str(user_id), models.PENDING_MEETINGS)
 
 
@@ -100,12 +100,25 @@ def add_meeting(context: te.ContextTypes.DEFAULT_TYPE, left_id: str, right_id: s
     meetings.setdefault(str(right_id), []).append(right_meeting)
 
 
+def update_meeting_status(
+    context: te.ContextTypes.DEFAULT_TYPE, left_id: int | str, right_id: int | str, status: models.MeetingStatus
+) -> None:
+    left_id, right_id = str(left_id), str(right_id)
+    logger.info(f'Updating meeting status between {left_id=} and {right_id=}: {status}')  # noqa: G004
+    for meeting in get_pending_meetings(context, left_id):
+        if meeting['user_id'] == right_id:
+            meeting['status'] = status
+    for meeting in get_pending_meetings(context, right_id):
+        if meeting['user_id'] == left_id:
+            meeting['status'] = status
+
+
 async def init_persistence(connection: sa.Connection) -> models.Data:
     res = await connection.scalars(sa.select(models.Persistence.data))  # type: ignore[call-overload,misc]
     return res.first() or models.Data()
 
 
-async def flush_persistence(session: tp.Any, data: models.Data) -> None:
+async def flush_persistence(session: tp.Any, data: models.Data) -> None:  # noqa: ANN401
     stmt = sqlite_upsert(models.Persistence).values({'id': 1, 'data': data})
     stmt = stmt.on_conflict_do_update(
         index_elements=[models.Persistence.id],  # type: ignore[list-item]

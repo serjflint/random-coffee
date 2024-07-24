@@ -17,26 +17,30 @@ from random_pycon_2024_bot.settings import settings
 from random_pycon_2024_bot.utils import get_command_value
 
 logger = logging.getLogger(__name__)
+TContext = te.ContextTypes.DEFAULT_TYPE
+THandler = te.CommandHandler | te.StringRegexHandler  # type: ignore[type-arg]
 
 
 class Command:
-    registry: tp.ClassVar[list[te.CommandHandler]] = []  # type: ignore[type-arg]
+    registry: tp.ClassVar[list[THandler]] = []
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, handler_type: type[THandler] = te.CommandHandler) -> None:
         self.name = name
+        self.handler_type = handler_type
 
     def __call__(self, func: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
-        command_handler = te.CommandHandler(command=self.name, callback=func)
+        command_handler = self.handler_type(self.name, func)
         self.registry.append(command_handler)
         return func
 
 
 def default_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
-    async def wrapper(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+    async def wrapper(update: t.Update, context: TContext) -> None:
         await handler_command(
-            utils.notnull(update.message),
-            user_id=utils.notnull(update.effective_user).id,
+            update=update,
             context=context,
+            message=utils.notnull(update.message),
+            user_id=utils.notnull(update.effective_user).id,
         )
 
     return wrapper
@@ -44,10 +48,15 @@ def default_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignor
 
 def admin_handler(auth_handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
     @markdown_handler
-    async def wrapper(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+    async def wrapper(update: t.Update, context: TContext, message: t.Message, user_id: int) -> str:
         logger.info('Got a command from %s', user_id)
         if user_id == settings.admin_chat_id:
-            response_text: str = await auth_handler_command(message, user_id=user_id, context=context)
+            response_text: str = await auth_handler_command(
+                update=update,
+                context=context,
+                message=message,
+                user_id=user_id,
+            )
             return response_text
         return messages.UNKNOWN_COMMAND_MESSAGE
 
@@ -56,8 +65,13 @@ def admin_handler(auth_handler_command: tp.Callable) -> tp.Callable:  # type: ig
 
 def markdown_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
     @default_handler
-    async def wrapper(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
-        response_text = await handler_command(message, user_id=user_id, context=context)
+    async def wrapper(update: t.Update, context: TContext, message: t.Message, user_id: int) -> None:
+        response_text = await handler_command(
+            update=update,
+            context=context,
+            message=message,
+            user_id=user_id,
+        )
         lang_code = db.get_lang_code(context, user_id)
         await message.reply_markdown(text=utils.get_message(response_text, lang_code))
 
@@ -66,8 +80,13 @@ def markdown_handler(handler_command: tp.Callable) -> tp.Callable:  # type: igno
 
 def markdown_handler_kwargs(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
     @default_handler
-    async def wrapper(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
-        response_text, kwargs = await handler_command(message, user_id=user_id, context=context)
+    async def wrapper(update: t.Update, context: TContext, message: t.Message, user_id: int) -> None:
+        response_text, kwargs = await handler_command(
+            update=update,
+            context=context,
+            message=message,
+            user_id=user_id,
+        )
         lang_code = db.get_lang_code(context, user_id)
         await message.reply_markdown(text=utils.get_message(response_text, lang_code).format(**kwargs))
 
@@ -76,35 +95,33 @@ def markdown_handler_kwargs(handler_command: tp.Callable) -> tp.Callable:  # typ
 
 @Command('help')
 @markdown_handler
-async def help_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def help_command(**_kwargs: tp.Any) -> str:
     return messages.HELP_SUCCESS_MESSAGE
 
 
 @Command('helpadmin')
 @admin_handler
-async def helpadmin_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def helpadmin_command(**_kwargs: tp.Any) -> str:
     return messages.ADMIN_HELP_MESSAGE
 
 
 @Command('start')
 @markdown_handler
-async def start_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def start_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
     db.register(context, user_id, message)
     return messages.START_SUCCESS_MESSAGE
 
 
 @Command('stop')
 @markdown_handler
-async def stop_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def stop_command(context: TContext, user_id: int, **_kwargs: tp.Any) -> str:
     db.unregister(context, user_id)
     return messages.STOP_SUCCESS_MESSAGE
 
 
 @Command('stats')
 @markdown_handler_kwargs
-async def stats_command(
-    message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE
-) -> tuple[str, dict[str, int]]:
+async def stats_command(context: TContext, user_id: int, **_kwargs: tp.Any) -> tuple[str, dict[str, int]]:
     stats = db.get_user_stats(context, user_id)
     success = stats.get(models.MeetingStatus.done, 0)
     not_yet = stats.get(models.MeetingStatus.yet, 0)
@@ -116,7 +133,7 @@ async def stats_command(
 @Command('who')
 @Command('all')
 @default_handler
-async def who_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+async def who_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> None:
     is_all = get_command_value(message) == 'all'
     meetings = db.get_pending_meetings(context, user_id) if not is_all else db.get_all_meetings(context, user_id)
     lang_code = db.get_lang_code(context, user_id)
@@ -164,7 +181,7 @@ async def who_command(message: t.Message, user_id: int, context: te.ContextTypes
 
 @Command('add')
 @admin_handler
-async def add_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def add_command(context: TContext, message: t.Message, **_kwargs: tp.Any) -> str:
     left, right = utils.get_mentions(message)
     db.add_meeting(
         context,
@@ -175,7 +192,43 @@ async def add_command(message: t.Message, user_id: int, context: te.ContextTypes
     return messages.CANCEL_SUCCESS_MESSAGE
 
 
-async def send_meeting(user_id: str, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+@Command('^/pass', te.StringRegexHandler)
+@markdown_handler
+async def pass_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
+    args = utils.get_command_args(message, command='pass')
+    if not args:
+        return messages.HELP_UPDATE_STATUS_MESSAGE
+    right_login = args[0]
+    left_id, right_id = user_id, db.get_login(context, right_login)['user_id']
+    db.update_meeting_status(context, left_id, right_id, status=models.MeetingStatus.done)
+    return messages.STATUS_UPDATE_MESSAGE
+
+
+@Command('^/reset', te.StringRegexHandler)
+@markdown_handler
+async def reset_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
+    args = utils.get_command_args(message, command='reset')
+    if not args:
+        return messages.HELP_UPDATE_STATUS_MESSAGE
+    right_login = args[0]
+    left_id, right_id = user_id, db.get_login(context, right_login)['user_id']
+    db.update_meeting_status(context, left_id, right_id, status=models.MeetingStatus.yet)
+    return messages.STATUS_UPDATE_MESSAGE
+
+
+@Command('^/deny', te.StringRegexHandler)
+@markdown_handler
+async def deny_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
+    args = utils.get_command_args(message, command='deny')
+    if not args:
+        return messages.HELP_UPDATE_STATUS_MESSAGE
+    right_login = args[0]
+    left_id, right_id = user_id, db.get_login(context, right_login)['user_id']
+    db.update_meeting_status(context, left_id, right_id, status=models.MeetingStatus.nope)
+    return messages.STATUS_UPDATE_MESSAGE
+
+
+async def send_meeting(context: TContext, user_id: str, **_kwargs: tp.Any) -> None:
     user = db.get_user(context, user_id)
     logger.info(user)
     if not user['enabled']:
@@ -188,14 +241,14 @@ async def send_meeting(user_id: str, context: te.ContextTypes.DEFAULT_TYPE) -> N
 
 @Command('newround')
 @admin_handler
-async def newround_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
+async def newround_command(context: TContext, **_kwargs: tp.Any) -> str:
     for left_id, left_meetings in db.iter_meetings(context, statuses={models.MeetingStatus.created}):
         for left in left_meetings:
             right_id = left['user_id']
             right_meetings = db.get_user_meetings(context, right_id, statuses={models.MeetingStatus.created})
             right = next(right for right in right_meetings if right['user_id'] == left_id)
-            await send_meeting(left_id, context)
-            await send_meeting(right_id, context)
+            await send_meeting(context, left_id)
+            await send_meeting(context, right_id)
             right['status'] = models.MeetingStatus.showed
             left['status'] = models.MeetingStatus.showed
 
@@ -203,8 +256,20 @@ async def newround_command(message: t.Message, user_id: int, context: te.Context
 
 
 @markdown_handler
-async def unknown(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
-    return messages.UNKNOWN_COMMAND_MESSAGE
+async def unknown(update: models.WebhookUpdate, context: TContext, message: t.Message, **kwargs: tp.Any) -> str:
+    message_text = utils.notnull(message.text)
+    if message_text.startswith('/pass'):
+        await pass_command(update=update, context=context)
+    elif message_text.startswith('/deny'):
+        await deny_command(update=update, context=context)
+    elif message_text.startswith('/reset'):
+        await reset_command(update=update, context=context)
+    elif message_text.startswith('/who'):
+        await who_command(update=update, context=context)
+    else:
+        logger.info('Unknown command: %s', message_text)
+        return messages.UNKNOWN_COMMAND_MESSAGE
+    return messages.CANCEL_SUCCESS_MESSAGE
 
 
 class CustomContext(te.CallbackContext[te.ExtBot, dict, dict, dict]):  # type: ignore[type-arg]
@@ -237,14 +302,14 @@ async def webhook_update(update: models.WebhookUpdate, context: CustomContext) -
     await context.bot.send_message(chat_id=settings.admin_chat_id, text=text, parse_mode=tc.ParseMode.HTML)
 
 
-async def echo(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+async def echo(update: t.Update, context: TContext) -> None:
     # TODO(serjflint): it doesn't work with default_handler decorator
     assert update.message  # noqa: S101
     assert update.message.text  # noqa: S101
     await context.bot.send_message(chat_id=utils.notnull(update.effective_chat).id, text=update.message.text)
 
 
-async def inline_caps(update: t.Update, context: te.ContextTypes.DEFAULT_TYPE) -> None:
+async def inline_caps(update: t.Update, context: TContext) -> None:
     inline_query = utils.notnull(update.inline_query)
     text = inline_query.query
     if not text:

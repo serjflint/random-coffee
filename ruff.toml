@@ -39,6 +39,7 @@ unfixable = []
 ]
 "handlers.py" = [
     "RUF029",
+    "ANN401",
 ]
 "controller.py" = [
     "TCH",  # typing is required at runtime for DI

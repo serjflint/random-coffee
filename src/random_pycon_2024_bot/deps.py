@@ -50,7 +50,7 @@ def create_tg_app(db_engine: sa.Engine, data: models.Data) -> te.Application:  #
         .context_types(context_types)
         .persistence(persistence_db)
         .build()
-    )
+    )  # TODO(serjflint): pass app and DI to handlers
 
     echo_handler = te.MessageHandler(te.filters.TEXT & (~te.filters.COMMAND), handlers.echo)
     inline_caps_handler = te.InlineQueryHandler(handlers.inline_caps)

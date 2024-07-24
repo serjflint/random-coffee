@@ -47,3 +47,12 @@ def get_mentions(message: t.Message) -> list[str]:
             mention = notnull(message.text)[ent.offset + 1 : ent.offset + ent.length]
             result.append(mention)
     return result
+
+
+def get_command_args(message: t.Message, command: str) -> list[str]:
+    msg = message.text
+    spaced, underscored = f'/{command} ', f'/{command}_'
+    if not msg or not (spaced in msg or underscored in msg):
+        return []
+    parts = msg.replace(underscored, spaced).split(' ')[1:]
+    return [part.strip('@ \n\t\r') for part in parts if part]
