@@ -1,4 +1,6 @@
 import collections
+import functools
+import logging
 import typing as tp
 
 import telegram as t
@@ -7,76 +9,90 @@ import telegram.ext as te
 from random_pycon_2024_bot import models
 from random_pycon_2024_bot.utils import notnull
 
-Data = dict[str, tp.Any]
-UserData = dict[int, tp.Any]
+logger = logging.getLogger(__name__)
 
 
-def get_users(context: te.ContextTypes.DEFAULT_TYPE) -> UserData:
-    return notnull(context.bot_data).setdefault('users', {})
+@functools.cache
+def get_user(context: te.ContextTypes.DEFAULT_TYPE, user_id: str) -> models.TelegramUser:
+    users = notnull(context.bot_data).setdefault('users', {})
+    return users.setdefault(str(user_id), {})  # type: ignore[no-any-return]
 
 
-def get_user(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> Data:
-    return get_users(context).setdefault(user_id, {})
+def get_lang_code(context: te.ContextTypes.DEFAULT_TYPE, user_id: int | str) -> str:
+    return get_user(context, str(user_id)).setdefault('lang_code', 'ru')
 
 
-def get_logins(context: te.ContextTypes.DEFAULT_TYPE) -> Data:
-    return notnull(context.bot_data).setdefault('logins', {})
+def _get_logins(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, models.TelegramUser]:
+    return notnull(context.bot_data).setdefault('logins', {})  # type: ignore[no-any-return]
 
 
-def get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[int, list[models.Meeting]]:
-    meetings: UserData = notnull(context.bot_data).setdefault('meetings', {})
-    return meetings
+def get_login(context: te.ContextTypes.DEFAULT_TYPE, username: str) -> models.TelegramUser:
+    return _get_logins(context)[username]
 
 
-def register(user_id: int, context: te.ContextTypes.DEFAULT_TYPE, message: t.Message) -> None:
-    user = get_user(user_id, context)
-    username = notnull(message.from_user).username
-    chat_id = notnull(message.chat).id
-    user.update({'username': username, 'chat_id': chat_id, 'user_id': user_id, 'enabled': True})
-    get_users(context)[user_id] = user
-    get_logins(context)[username] = user
-
-
-def unregister(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
-    user = get_user(user_id, context)
-    if not user:
-        return
-    user.clear()
-    user['enabled'] = False
-
-
-def get_user_stats(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> dict[models.MeetingStatus, int]:
-    result: dict[models.MeetingStatus, int] = collections.defaultdict(int)
-    meetings = get_meetings(context)
-    if user_id not in meetings:
-        return result
-    user_meetings = meetings[user_id]
-    for data in user_meetings:
-        meeting = models.Meeting(**data)
-        result[meeting.status] += 1
-    return result
+def _get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, list[models.CacheMeeting]]:
+    return notnull(context.bot_data).setdefault('meetings', {})  # type: ignore[no-any-return]
 
 
 def get_user_meetings(
-    user_id: int, context: te.ContextTypes.DEFAULT_TYPE, statuses: set[models.MeetingStatus]
-) -> list[models.Meeting]:
-    meetings = get_meetings(context)
-    if user_id not in meetings:
-        return []
-    return [meeting for meeting in meetings[user_id] if meeting.status in statuses]
+    context: te.ContextTypes.DEFAULT_TYPE, user_id: str, statuses: set[models.MeetingStatus]
+) -> list[models.CacheMeeting]:
+    meetings = _get_meetings(context)
+    return [meeting for meeting in meetings[str(user_id)] if not statuses or meeting['status'] in statuses]
 
 
-def get_pending_meetings(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> list[models.Meeting]:
-    return get_user_meetings(user_id, context, models.PENDING_MEETINGS)
+def iter_meetings(
+    context: te.ContextTypes.DEFAULT_TYPE, statuses: set[models.MeetingStatus]
+) -> tp.Iterator[tuple[str, list[models.CacheMeeting]]]:
+    all_meetings = _get_meetings(context)
+    for user_id in all_meetings:
+        yield (user_id, get_user_meetings(context, user_id, statuses))
 
 
-def get_all_meetings(user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> list[models.Meeting]:
-    return get_user_meetings(user_id, context, models.ALL_MEETINGS)
+def register(context: te.ContextTypes.DEFAULT_TYPE, user_id: int, message: t.Message) -> None:
+    user = get_user(context, str(user_id))
+    username = notnull(notnull(message.from_user).username)
+    chat_id = notnull(notnull(message.chat).id)
+    user.update(
+        models.TelegramUser(
+            username=username,
+            chat_id=str(chat_id),
+            user_id=str(user_id),
+            enabled=True,
+            lang_code=user.get('lang_code', 'ru'),
+        )
+    )
+    _get_logins(context)[username] = user
 
 
-def add_meeting(left_id: int, right_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
-    meetings = get_meetings(context)
-    left_meeting = models.Meeting(user_id=right_id, status=models.MeetingStatus.created)
-    meetings.setdefault(left_id, []).append(left_meeting)
-    right_meeting = models.Meeting(user_id=left_id, status=models.MeetingStatus.created)
-    meetings.setdefault(right_id, []).append(right_meeting)
+def unregister(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> None:
+    user = get_user(context, str(user_id))
+    if not user:
+        return
+    user.clear()  # type: ignore[attr-defined]
+    user['enabled'] = False
+
+
+def get_user_stats(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> dict[models.MeetingStatus, int]:
+    result: dict[models.MeetingStatus, int] = collections.defaultdict(int)
+    user_meetings = get_user_meetings(context, str(user_id), statuses=models.ALL_MEETINGS)
+    for meeting in user_meetings:
+        result[meeting['status']] += 1
+    return result
+
+
+def get_pending_meetings(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> list[models.CacheMeeting]:
+    return get_user_meetings(context, str(user_id), models.PENDING_MEETINGS)
+
+
+def get_all_meetings(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> list[models.CacheMeeting]:
+    return get_user_meetings(context, str(user_id), models.ALL_MEETINGS)
+
+
+def add_meeting(context: te.ContextTypes.DEFAULT_TYPE, left_id: str, right_id: str) -> None:
+    meetings = _get_meetings(context)
+    logger.info(f'Adding meeting between {left_id=} and {right_id=}')  # noqa: G004
+    left_meeting = models.CacheMeeting(user_id=right_id, status=models.MeetingStatus.created)
+    meetings.setdefault(str(left_id), []).append(left_meeting)
+    right_meeting = models.CacheMeeting(user_id=left_id, status=models.MeetingStatus.created)
+    meetings.setdefault(str(right_id), []).append(right_meeting)

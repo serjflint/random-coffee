@@ -1,9 +1,9 @@
+import functools
 import logging
 import typing as tp
 
 import telegram as t
 import telegram.constants as tc
-import telegram.ext as te
 
 from random_pycon_2024_bot import messages
 
@@ -19,9 +19,8 @@ def notnull(value: _T | None) -> _T:
     return value
 
 
-def get_message(msg_code: str, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> str:
-    user = notnull(context.user_data)
-    lang_code = user.setdefault('lang_code', 'ru')
+@functools.cache
+def get_message(msg_code: str, lang_code: str) -> str:
     message = messages.MESSAGES.get(msg_code, {}).get(lang_code)
     if message is None:
         logger.info(f'Unknown {lang_code=} for {msg_code=}')  # noqa: G004
@@ -29,9 +28,8 @@ def get_message(msg_code: str, user_id: int, context: te.ContextTypes.DEFAULT_TY
     return message
 
 
-def get_multi_message(msg_code: str, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> list[str]:
-    user = notnull(context.user_data)
-    lang_code = user.setdefault('lang_code', 'ru')
+@functools.cache
+def get_multi_message(msg_code: str, lang_code: str) -> list[str]:
     return messages.MULTI_MESSAGES.get(msg_code, {}).get(lang_code) or []
 
 

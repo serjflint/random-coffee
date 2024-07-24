@@ -9,9 +9,12 @@ import telegram.ext as te
 
 from random_pycon_2024_bot import handlers
 from random_pycon_2024_bot import models
+from random_pycon_2024_bot import persistence
 from random_pycon_2024_bot.settings import settings
 
 logger = logging.getLogger(__name__)
+
+PERSISTENCE_DB_URL = 'sqlite:///persistence.sqlite'
 
 
 @contextlib.asynccontextmanager
@@ -33,7 +36,15 @@ async def get_tg_app(app: ls.Litestar) -> tp.AsyncGenerator[None, None]:
 
 def create_tg_app() -> te.Application:  # type: ignore[type-arg]
     context_types = te.ContextTypes(context=handlers.CustomContext)
-    application = te.ApplicationBuilder().token(settings.token).updater(None).context_types(context_types).build()
+    persistence_db = persistence.SqlitePersistence(PERSISTENCE_DB_URL)
+    application = (
+        te.ApplicationBuilder()
+        .token(settings.token)
+        .updater(None)
+        .context_types(context_types)
+        .persistence(persistence_db)
+        .build()
+    )
 
     echo_handler = te.MessageHandler(te.filters.TEXT & (~te.filters.COMMAND), handlers.echo)
     inline_caps_handler = te.InlineQueryHandler(handlers.inline_caps)
@@ -58,5 +69,5 @@ async def init_db(app: ls.Litestar) -> None:
         await conn.run_sync(models.Base.metadata.create_all)
 
 
-db_config = plugins.SQLAlchemyAsyncConfig(connection_string='sqlite+aiosqlite:///telegram_users_async.sqlite')
+db_config = plugins.SQLAlchemyAsyncConfig(connection_string='sqlite+aiosqlite:///db.sqlite')
 db_plugin = plugins.SQLAlchemyPlugin(config=db_config)

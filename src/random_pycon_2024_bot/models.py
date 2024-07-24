@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+import typing as tp
 
 from sqlalchemy import orm
 
@@ -26,18 +27,17 @@ class WebhookUpdate:
     payload: str
 
 
-@dataclasses.dataclass
-class Meeting:
-    user_id: int
-    status: MeetingStatus = dataclasses.field(default_factory=MeetingStatus)  # type: ignore[arg-type]
-
-
 class Base(orm.DeclarativeBase): ...
 
 
-class TelegramUser(Base):
-    __tablename__ = 'telegram_user'
-    user_id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    username: orm.Mapped[str]
-    chat_id: orm.Mapped[int]
-    enabled: orm.Mapped[bool] = orm.mapped_column(default=True)
+class TelegramUser(tp.TypedDict):
+    user_id: str
+    username: str
+    chat_id: str
+    enabled: bool
+    lang_code: str
+
+
+class CacheMeeting(tp.TypedDict):
+    user_id: str
+    status: MeetingStatus
