@@ -18,7 +18,7 @@ from random_pycon_2024_bot.utils import get_command_value
 
 logger = logging.getLogger(__name__)
 TContext = te.ContextTypes.DEFAULT_TYPE
-THandler = te.CommandHandler | te.StringRegexHandler  # type: ignore[type-arg]
+THandler = te.CommandHandler | te.PrefixHandler  # type: ignore[type-arg]
 
 
 class Command:
@@ -27,9 +27,13 @@ class Command:
     def __init__(self, name: str, handler_type: type[THandler] = te.CommandHandler) -> None:
         self.name = name
         self.handler_type = handler_type
+        self.default_prefix: str = '/'
 
     def __call__(self, func: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
-        command_handler = self.handler_type(self.name, func)
+        if self.handler_type == te.CommandHandler:
+            command_handler = te.CommandHandler(self.name, func)
+        else:
+            command_handler = te.PrefixHandler(self.default_prefix, self.name, func)
         self.registry.append(command_handler)
         return func
 
@@ -192,9 +196,10 @@ async def add_command(context: TContext, message: t.Message, **_kwargs: tp.Any) 
     return messages.CANCEL_SUCCESS_MESSAGE
 
 
-@Command('^/pass', te.StringRegexHandler)
+@Command('pass', te.PrefixHandler)
 @markdown_handler
 async def pass_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
+    logger.info('Got a /pass command from %s', user_id)
     args = utils.get_command_args(message, command='pass')
     if not args:
         return messages.HELP_UPDATE_STATUS_MESSAGE
@@ -204,7 +209,7 @@ async def pass_command(context: TContext, message: t.Message, user_id: int, **_k
     return messages.STATUS_UPDATE_MESSAGE
 
 
-@Command('^/reset', te.StringRegexHandler)
+@Command('reset', te.PrefixHandler)
 @markdown_handler
 async def reset_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
     args = utils.get_command_args(message, command='reset')
@@ -216,7 +221,7 @@ async def reset_command(context: TContext, message: t.Message, user_id: int, **_
     return messages.STATUS_UPDATE_MESSAGE
 
 
-@Command('^/deny', te.StringRegexHandler)
+@Command('deny', te.PrefixHandler)
 @markdown_handler
 async def deny_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
     args = utils.get_command_args(message, command='deny')
@@ -258,6 +263,7 @@ async def newround_command(context: TContext, **_kwargs: tp.Any) -> str:
 @markdown_handler
 async def unknown(update: models.WebhookUpdate, context: TContext, message: t.Message, **kwargs: tp.Any) -> str:
     message_text = utils.notnull(message.text)
+    logger.info('Unknown command: %s', message_text)
     if message_text.startswith('/pass'):
         await pass_command(update=update, context=context)
     elif message_text.startswith('/deny'):
@@ -267,7 +273,6 @@ async def unknown(update: models.WebhookUpdate, context: TContext, message: t.Me
     elif message_text.startswith('/who'):
         await who_command(update=update, context=context)
     else:
-        logger.info('Unknown command: %s', message_text)
         return messages.UNKNOWN_COMMAND_MESSAGE
     return messages.CANCEL_SUCCESS_MESSAGE
 
