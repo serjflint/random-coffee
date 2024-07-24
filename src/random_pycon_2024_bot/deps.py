@@ -3,6 +3,7 @@ import logging
 import typing as tp
 
 import litestar as ls
+from litestar.contrib.sqlalchemy import plugins
 import telegram as t
 import telegram.ext as te
 
@@ -49,3 +50,13 @@ def create_tg_app() -> te.Application:  # type: ignore[type-arg]
     application.add_handler(unknown_handler)
 
     return application
+
+
+async def init_db(app: ls.Litestar) -> None:
+    async with app.state.db_engine.begin() as conn:
+        # TODO(serjflint): use metadata.drop_all in tests
+        await conn.run_sync(models.Base.metadata.create_all)
+
+
+db_config = plugins.SQLAlchemyAsyncConfig(connection_string='sqlite+aiosqlite:///telegram_users_async.sqlite')
+db_plugin = plugins.SQLAlchemyPlugin(config=db_config)

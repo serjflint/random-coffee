@@ -25,7 +25,7 @@ class Command:
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def __call__(self, func: tp.Callable) -> te.CommandHandler:  # type: ignore[type-arg]
+    def __call__(self, func: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
         command_handler = te.CommandHandler(command=self.name, callback=func)
         self.registry.append(command_handler)
         return func
@@ -118,9 +118,7 @@ async def stats_command(
 @Command('who')
 @Command('all')
 @default_handler
-async def who_command(
-    message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE
-) -> tuple[str, dict[str, int]]:
+async def who_command(message: t.Message, user_id: int, context: te.ContextTypes.DEFAULT_TYPE) -> None:
     is_all = get_command_value(message) == 'all'
     meetings = db.get_pending_meetings(user_id, context) if not is_all else db.get_all_meetings(user_id, context)
     get_message = functools.partial(utils.get_message, user_id=user_id, context=context)

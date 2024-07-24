@@ -11,7 +11,7 @@ Data = dict[str, tp.Any]
 UserData = dict[int, tp.Any]
 
 
-def get_users(context: te.ContextTypes.DEFAULT_TYPE) -> Data:
+def get_users(context: te.ContextTypes.DEFAULT_TYPE) -> UserData:
     return notnull(context.bot_data).setdefault('users', {})
 
 

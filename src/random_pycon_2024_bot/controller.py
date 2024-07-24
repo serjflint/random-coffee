@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import logging
 import typing as tp
 
 import litestar as ls
 from litestar import datastructures as ds
+from sqlalchemy.ext.asyncio import AsyncSession
 import telegram as t
 
 from random_pycon_2024_bot import models
@@ -14,8 +17,9 @@ class RootController(ls.Controller):
     path = ''
 
     @ls.post('/telegram')
-    async def telegram(self, data: dict[str, tp.Any], state: ds.State) -> None:
+    async def telegram(self, data: dict[str, tp.Any], state: ds.State, db_session: AsyncSession) -> None:
         """Handle incoming Telegram updates by putting them into the `update_queue`."""
+        state.db_session = db_session
         await state.tg_app.update_queue.put(t.Update.de_json(data=data, bot=state.tg_app.bot))
 
     @ls.post(path='/submitpayload')

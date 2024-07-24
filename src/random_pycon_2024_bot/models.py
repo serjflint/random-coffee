@@ -1,6 +1,8 @@
 import dataclasses
 import enum
 
+from sqlalchemy import orm
+
 
 @enum.unique
 class MeetingStatus(enum.StrEnum):
@@ -28,3 +30,14 @@ class WebhookUpdate:
 class Meeting:
     user_id: int
     status: MeetingStatus = dataclasses.field(default_factory=MeetingStatus)  # type: ignore[arg-type]
+
+
+class Base(orm.DeclarativeBase): ...
+
+
+class TelegramUser(Base):
+    __tablename__ = 'telegram_user'
+    user_id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    username: orm.Mapped[str]
+    chat_id: orm.Mapped[int]
+    enabled: orm.Mapped[bool] = orm.mapped_column(default=True)

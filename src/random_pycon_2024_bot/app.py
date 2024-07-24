@@ -10,4 +10,9 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-app = ls.Litestar(route_handlers=[controller.RootController], lifespan=[deps.get_tg_app])
+app = ls.Litestar(
+    route_handlers=[controller.RootController],
+    lifespan=[deps.get_tg_app],
+    plugins=[deps.db_plugin],
+    on_startup=[deps.init_db],
+)

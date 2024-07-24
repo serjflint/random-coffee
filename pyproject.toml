@@ -8,6 +8,7 @@ dependencies = [
     "python-telegram-bot[all]>=21.3",
     "pydantic-settings>=2.3.4",
     "granian>=1.5.1",
+    "aiosqlite>=0.20.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.11"

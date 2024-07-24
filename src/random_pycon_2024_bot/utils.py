@@ -24,7 +24,7 @@ def get_message(msg_code: str, user_id: int, context: te.ContextTypes.DEFAULT_TY
     lang_code = user.setdefault('lang_code', 'ru')
     message = messages.MESSAGES.get(msg_code, {}).get(lang_code)
     if message is None:
-        logger.info(f'Unknown {lang_code=} for {msg_code=}')
+        logger.info(f'Unknown {lang_code=} for {msg_code=}')  # noqa: G004
         return messages.UNKNOWN_TEXT_MESSAGE_RU
     return message
 
@@ -38,7 +38,7 @@ def get_multi_message(msg_code: str, user_id: int, context: te.ContextTypes.DEFA
 def get_command_value(message: t.Message) -> str | None:
     for ent in message.entities:
         if ent.type == tc.MessageEntityType.BOT_COMMAND:
-            return message.text[ent.offset + 1 : ent.offset + ent.length]
+            return notnull(message.text)[ent.offset + 1 : ent.offset + ent.length]
     return None
 
 
@@ -46,6 +46,6 @@ def get_mentions(message: t.Message) -> list[str]:
     result = []
     for ent in message.entities:
         if ent.type == tc.MessageEntityType.MENTION:
-            mention = message.text[ent.offset + 1 : ent.offset + ent.length]
+            mention = notnull(message.text)[ent.offset + 1 : ent.offset + ent.length]
             result.append(mention)
     return result
