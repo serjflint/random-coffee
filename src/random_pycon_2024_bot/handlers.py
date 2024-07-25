@@ -179,8 +179,23 @@ async def who_command(context: TContext, message: t.Message, user_id: int, **_kw
 @Command('more')
 @markdown_handler
 async def more_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> None:
-    more_meetings = db.get_user_meetings(context, user_id, statuses=models.MeetingStatus.more)
+    left_id = user_id
+    more_meetings = db.get_user_meetings(context, left_id, statuses=models.MeetingStatus.more)
     if more_meetings:
+        return messages.CANCEL_SUCCESS_MESSAGE
+    left_meeting = db.add_meeting(context, left_id, left_id, status=models.MeetingStatus.more)
+    for right_id, meetings in db.iter_meetings(context, statuses=models.PENDING_MEETINGS):
+        if right_id == left_id:
+            continue
+        common_meetings = [meeting for meeting in meetings if meeting['user_id'] == left_id]
+        if common_meetings:
+            return messages.MEETING_ALREADY_DONE_LABEL
+        more_meetings = db.get_user_meetings(context, right_id, statuses=models.MeetingStatus.more)
+        if not more_meetings:
+            continue
+        right_meeting = more_meetings[0]
+        break
+    else:
         return messages.CANCEL_SUCCESS_MESSAGE
     return messages.CANCEL_SUCCESS_MESSAGE
 

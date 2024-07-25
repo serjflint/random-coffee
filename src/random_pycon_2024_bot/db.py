@@ -41,12 +41,13 @@ def _get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, list[model
 
 
 def get_user_meetings(
-    context: te.ContextTypes.DEFAULT_TYPE, user_id: str, statuses: set[models.MeetingStatus]
+    context: te.ContextTypes.DEFAULT_TYPE, user_id: int | str, statuses: set[models.MeetingStatus]
 ) -> list[models.CacheMeeting]:
+    user_id = str(user_id)
     if not get_user(context, user_id).get('enabled', False):
         return []
-    meetings = _get_meetings(context).setdefault(str(user_id), [])  # type: ignore[typeddict-item]
-    return [meeting for meeting in meetings if not statuses or meeting['status'] in statuses]
+    meetings = _get_meetings(context).setdefault(user_id, [])  # type: ignore[typeddict-item]
+    return [meeting for meeting in meetings if meeting['status'] in statuses]
 
 
 def iter_meetings(
