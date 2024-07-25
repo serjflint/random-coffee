@@ -66,6 +66,8 @@ def create_tg_app(db_engine: sa.Engine, data: models.Data) -> te.Application:  #
     application.add_handler(webhook_handler)
     application.add_handler(unknown_handler)
 
+    application.add_error_handler(handlers.error_handler)
+
     return application
 
 
