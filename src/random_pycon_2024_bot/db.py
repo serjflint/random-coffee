@@ -19,7 +19,7 @@ def _get_users(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, models.Telegr
 
 
 @functools.cache
-def get_user(context: te.ContextTypes.DEFAULT_TYPE, user_id: str) -> models.TelegramUser:
+def get_user(context: te.ContextTypes.DEFAULT_TYPE, user_id: int | str) -> models.TelegramUser:
     users = _get_users(context)
     return users.setdefault(str(user_id), {})  # type: ignore[typeddict-item]
 
@@ -46,7 +46,7 @@ def get_user_meetings(
     user_id = str(user_id)
     if not get_user(context, user_id).get('enabled', False):
         return []
-    meetings = _get_meetings(context).setdefault(user_id, [])  # type: ignore[typeddict-item]
+    meetings = _get_meetings(context).setdefault(user_id, [])
     return [meeting for meeting in meetings if meeting['status'] in statuses]
 
 
@@ -128,9 +128,11 @@ def update_meeting_status(
     for meeting in get_pending_meetings(context, left_id):
         if meeting['user_id'] == right_id:
             meeting['status'] = status
+            logger.info('Done left')
     for meeting in get_pending_meetings(context, right_id):
         if meeting['user_id'] == left_id:
             meeting['status'] = status
+            logger.info('Done right')
 
 
 async def init_persistence(connection: sa.Connection) -> models.Data:

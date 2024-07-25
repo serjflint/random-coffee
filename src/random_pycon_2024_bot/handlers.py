@@ -178,9 +178,9 @@ async def who_command(context: TContext, message: t.Message, user_id: int, **_kw
 
 @Command('more')
 @markdown_handler
-async def more_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> None:
+async def more_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
     left_id = user_id
-    more_meetings = db.get_user_meetings(context, left_id, statuses=models.MeetingStatus.more)
+    more_meetings = db.get_user_meetings(context, left_id, statuses={models.MeetingStatus.more})
     if more_meetings:
         return messages.CANCEL_SUCCESS_MESSAGE
     left_meeting = db.add_meeting(context, left_id, left_id, status=models.MeetingStatus.more)
@@ -190,13 +190,21 @@ async def more_command(context: TContext, message: t.Message, user_id: int, **_k
         common_meetings = [meeting for meeting in meetings if meeting['user_id'] == left_id]
         if common_meetings:
             return messages.MEETING_ALREADY_DONE_LABEL
-        more_meetings = db.get_user_meetings(context, right_id, statuses=models.MeetingStatus.more)
+        more_meetings = db.get_user_meetings(context, right_id, statuses={models.MeetingStatus.more})
         if not more_meetings:
             continue
         right_meeting = more_meetings[0]
         break
     else:
         return messages.CANCEL_SUCCESS_MESSAGE
+    left_meeting['user_id'] = str(right_id)
+    right_meeting['user_id'] = str(left_id)
+    left_meeting['status'] = models.MeetingStatus.created
+    right_meeting['status'] = models.MeetingStatus.created
+    await send_meeting(context, left_id)
+    await send_meeting(context, right_id)
+    left_meeting['status'] = models.MeetingStatus.showed
+    right_meeting['status'] = models.MeetingStatus.showed
     return messages.CANCEL_SUCCESS_MESSAGE
 
 
@@ -244,7 +252,8 @@ async def leaderboard_command(context: TContext, **_kwargs: tp.Any) -> tuple[str
     return messages.LEADER_BOARD_MESSAGE, kwargs
 
 
-async def send_meeting(context: TContext, user_id: str, **_kwargs: tp.Any) -> None:
+async def send_meeting(context: TContext, user_id: int | str, **_kwargs: tp.Any) -> None:
+    user_id = str(user_id)
     user = db.get_user(context, user_id)
     logger.info(user)
     if not user['enabled']:
@@ -396,7 +405,7 @@ async def error_handler(update: object, context: TContext) -> None:
 
     # traceback.format_exception returns the usual python message about an exception, but as a
     # list of strings rather than a single string, so we have to join them together.
-    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)  # type: ignore[union-attr]
     tb_string = ''.join(tb_list)
 
     # Build the message with some markup and additional information about what happened.
