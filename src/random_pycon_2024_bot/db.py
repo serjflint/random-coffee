@@ -14,10 +14,14 @@ from random_pycon_2024_bot.utils import notnull
 logger = logging.getLogger(__name__)
 
 
+def _get_users(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, models.TelegramUser]:
+    return notnull(context.bot_data).setdefault('users', {})  # type: ignore[no-any-return]
+
+
 @functools.cache
 def get_user(context: te.ContextTypes.DEFAULT_TYPE, user_id: str) -> models.TelegramUser:
-    users = notnull(context.bot_data).setdefault('users', {})
-    return users.setdefault(str(user_id), {})  # type: ignore[no-any-return]
+    users = _get_users(context)
+    return users.setdefault(str(user_id), {})  # type: ignore[typeddict-item]
 
 
 def get_lang_code(context: te.ContextTypes.DEFAULT_TYPE, user_id: int | str) -> str:
@@ -49,6 +53,14 @@ def iter_meetings(
     all_meetings = _get_meetings(context)
     for user_id in all_meetings:
         yield (user_id, get_user_meetings(context, user_id, statuses))
+
+
+def count_enabled_users(context: te.ContextTypes.DEFAULT_TYPE) -> int:
+    res = 0
+    for user in _get_users(context).values():
+        if user['enabled']:
+            res += 1
+    return res
 
 
 def register(context: te.ContextTypes.DEFAULT_TYPE, user_id: int, message: t.Message) -> None:

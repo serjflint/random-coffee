@@ -30,6 +30,7 @@ class Command:
         self.default_prefix: str = '/'
 
     def __call__(self, func: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
+        command_handler: THandler
         if self.handler_type == te.CommandHandler:
             command_handler = te.CommandHandler(self.name, func)
         else:
@@ -70,27 +71,16 @@ def admin_handler(auth_handler_command: tp.Callable) -> tp.Callable:  # type: ig
 def markdown_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
     @default_handler
     async def wrapper(update: t.Update, context: TContext, message: t.Message, user_id: int) -> None:
-        response_text = await handler_command(
+        res = await handler_command(
             update=update,
             context=context,
             message=message,
             user_id=user_id,
         )
-        lang_code = db.get_lang_code(context, user_id)
-        await message.reply_markdown(text=utils.get_message(response_text, lang_code))
-
-    return wrapper
-
-
-def markdown_handler_kwargs(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
-    @default_handler
-    async def wrapper(update: t.Update, context: TContext, message: t.Message, user_id: int) -> None:
-        response_text, kwargs = await handler_command(
-            update=update,
-            context=context,
-            message=message,
-            user_id=user_id,
-        )
+        if isinstance(res, tuple) and len(res) == 2:  # noqa: PLR2004
+            response_text, kwargs = res
+        else:
+            response_text, kwargs = res, {}
         lang_code = db.get_lang_code(context, user_id)
         await message.reply_markdown(text=utils.get_message(response_text, lang_code).format(**kwargs))
 
@@ -124,7 +114,7 @@ async def stop_command(context: TContext, user_id: int, **_kwargs: tp.Any) -> st
 
 
 @Command('stats')
-@markdown_handler_kwargs
+@markdown_handler
 async def stats_command(context: TContext, user_id: int, **_kwargs: tp.Any) -> tuple[str, dict[str, int]]:
     stats = db.get_user_stats(context, user_id)
     success = stats.get(models.MeetingStatus.done, 0)
@@ -196,6 +186,75 @@ async def add_command(context: TContext, message: t.Message, **_kwargs: tp.Any) 
     return messages.CANCEL_SUCCESS_MESSAGE
 
 
+@Command('leaderboard')
+@admin_handler
+async def leaderboard_command(context: TContext, message: t.Message, **_kwargs: tp.Any) -> tuple[str, dict[str, int]]:
+    users_with_meetings = 0
+    all_meetings = 0
+    passed_meetings, denied_meetings, notyet_meetings = 0, 0, 0
+    for _, meetings in db.iter_meetings(context, statuses=models.ALL_MEETINGS):
+        if len(meetings) > 0:
+            users_with_meetings += 1
+            all_meetings += len(meetings)
+        for meeting in meetings:
+            if meeting['status'] == models.MeetingStatus.done:
+                passed_meetings += 1
+            elif meeting['status'] == models.MeetingStatus.nope:
+                denied_meetings += 1
+            else:
+                notyet_meetings += 1
+
+    kwargs = {
+        'all_rounds': -1,
+        'all_auth': users_with_meetings,
+        'all_members': db.count_enabled_users(context),
+        'all_meetings': all_meetings // 2,
+        'all_passed': passed_meetings,
+        'all_denied': denied_meetings,
+        'all_notyet': notyet_meetings,
+    }
+
+    return messages.LEADER_BOARD_MESSAGE, kwargs
+
+
+async def send_meeting(context: TContext, user_id: str, **_kwargs: tp.Any) -> None:
+    user = db.get_user(context, user_id)
+    logger.info(user)
+    if not user['enabled']:
+        return
+    lang_code = db.get_lang_code(context, user_id)
+    await context.bot.send_message(
+        chat_id=user_id, text=utils.get_message(messages.TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS, lang_code)
+    )
+
+
+@Command('newround')
+@admin_handler
+async def newround_command(context: TContext, **_kwargs: tp.Any) -> str:
+    for left_id, left_meetings in db.iter_meetings(context, statuses={models.MeetingStatus.created}):
+        for left in left_meetings:
+            right_id = left['user_id']
+            right_meetings = db.get_user_meetings(context, right_id, statuses={models.MeetingStatus.created})
+            right = next(right for right in right_meetings if right['user_id'] == left_id)
+            await send_meeting(context, left_id)
+            await send_meeting(context, right_id)
+            right['status'] = models.MeetingStatus.showed
+            left['status'] = models.MeetingStatus.showed
+
+    return messages.CANCEL_SUCCESS_MESSAGE
+
+
+@Command('notifyall')
+@admin_handler
+async def notifyall_command(context: TContext, **_kwargs: tp.Any) -> str:
+    for user_id, meetings in db.iter_meetings(context, statuses=models.PENDING_MEETINGS):
+        if not meetings:
+            continue
+        await send_meeting(context, user_id)
+
+    return messages.CANCEL_SUCCESS_MESSAGE
+
+
 @Command('pass', te.PrefixHandler)
 @markdown_handler
 async def pass_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
@@ -231,33 +290,6 @@ async def deny_command(context: TContext, message: t.Message, user_id: int, **_k
     left_id, right_id = user_id, db.get_login(context, right_login)['user_id']
     db.update_meeting_status(context, left_id, right_id, status=models.MeetingStatus.nope)
     return messages.STATUS_UPDATE_MESSAGE
-
-
-async def send_meeting(context: TContext, user_id: str, **_kwargs: tp.Any) -> None:
-    user = db.get_user(context, user_id)
-    logger.info(user)
-    if not user['enabled']:
-        return
-    lang_code = db.get_lang_code(context, user_id)
-    await context.bot.send_message(
-        chat_id=user_id, text=utils.get_message(messages.TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS, lang_code)
-    )
-
-
-@Command('newround')
-@admin_handler
-async def newround_command(context: TContext, **_kwargs: tp.Any) -> str:
-    for left_id, left_meetings in db.iter_meetings(context, statuses={models.MeetingStatus.created}):
-        for left in left_meetings:
-            right_id = left['user_id']
-            right_meetings = db.get_user_meetings(context, right_id, statuses={models.MeetingStatus.created})
-            right = next(right for right in right_meetings if right['user_id'] == left_id)
-            await send_meeting(context, left_id)
-            await send_meeting(context, right_id)
-            right['status'] = models.MeetingStatus.showed
-            left['status'] = models.MeetingStatus.showed
-
-    return messages.CANCEL_SUCCESS_MESSAGE
 
 
 @markdown_handler
