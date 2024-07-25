@@ -79,6 +79,8 @@ comm==0.2.2
 cryptography==42.0.8
     # via litestar
     # via python-telegram-bot
+dateutils==0.6.12
+    # via random-pycon-2024-bot
 debugpy==1.8.2
     # via ipykernel
 decorator==5.1.1
@@ -328,6 +330,7 @@ pygments==2.18.0
 pyprof2html==0.3.2
 python-dateutil==2.9.0.post0
     # via arrow
+    # via dateutils
     # via faker
     # via jupyter-client
 python-dotenv==1.0.1
@@ -341,6 +344,7 @@ python-telegram-bot==21.3
     # via random-pycon-2024-bot
 pytz==2024.1
     # via apscheduler
+    # via dateutils
     # via python-telegram-bot
 pyyaml==6.0.1
     # via jupyter-events

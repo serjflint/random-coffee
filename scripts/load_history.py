@@ -18,12 +18,13 @@ for file in os.listdir('history'):
                 meetings[left_user] = []
             if right_user not in meetings:
                 meetings[right_user] = []
-            users.add(id(left_user))
-            users.add(id(right_user))
             left_meeting, right_meeting = (right_user, read_status()), (left_user, read_status())
-            statuses.add(id(left_meeting[1]))
-            statuses.add(id(right_meeting[1]))
             meetings[left_user].append((right_user, read_status()))
             meetings[right_user].append((left_user, read_status()))
+
+            users.add(id(left_user))
+            users.add(id(right_user))
+            statuses.add(id(left_meeting[1]))
+            statuses.add(id(right_meeting[1]))
 
 print(len(users), len(statuses), len(meetings))

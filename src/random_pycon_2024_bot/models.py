@@ -17,6 +17,7 @@ class MeetingStatus(enum.StrEnum):
     yet = enum.auto()
     done = enum.auto()
     nope = enum.auto()
+    more = enum.auto()
 
 
 PENDING_MEETINGS = {MeetingStatus.showed, MeetingStatus.asked, MeetingStatus.yet}

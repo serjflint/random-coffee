@@ -43,8 +43,10 @@ def _get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, list[model
 def get_user_meetings(
     context: te.ContextTypes.DEFAULT_TYPE, user_id: str, statuses: set[models.MeetingStatus]
 ) -> list[models.CacheMeeting]:
-    meetings = _get_meetings(context)
-    return [meeting for meeting in meetings[str(user_id)] if not statuses or meeting['status'] in statuses]
+    if not get_user(context, user_id).get('enabled', False):
+        return []
+    meetings = _get_meetings(context).setdefault(str(user_id), [])  # type: ignore[typeddict-item]
+    return [meeting for meeting in meetings if not statuses or meeting['status'] in statuses]
 
 
 def iter_meetings(
@@ -52,6 +54,8 @@ def iter_meetings(
 ) -> tp.Iterator[tuple[str, list[models.CacheMeeting]]]:
     all_meetings = _get_meetings(context)
     for user_id in all_meetings:
+        if not get_user(context, user_id).get('enabled', False):
+            yield (user_id, [])
         yield (user_id, get_user_meetings(context, user_id, statuses))
 
 
@@ -103,13 +107,16 @@ def get_all_meetings(context: te.ContextTypes.DEFAULT_TYPE, user_id: int) -> lis
     return get_user_meetings(context, str(user_id), models.ALL_MEETINGS)
 
 
-def add_meeting(context: te.ContextTypes.DEFAULT_TYPE, left_id: str, right_id: str) -> None:
+def add_meeting(
+    context: te.ContextTypes.DEFAULT_TYPE,
+    left_id: int | str,
+    right_id: int | str,
+    status: models.MeetingStatus = models.MeetingStatus.created,
+) -> models.CacheMeeting:
     meetings = _get_meetings(context)
-    logger.info(f'Adding meeting between {left_id=} and {right_id=}')  # noqa: G004
-    left_meeting = models.CacheMeeting(user_id=right_id, status=models.MeetingStatus.created)
+    left_meeting = models.CacheMeeting(user_id=str(right_id), status=status)
     meetings.setdefault(str(left_id), []).append(left_meeting)
-    right_meeting = models.CacheMeeting(user_id=left_id, status=models.MeetingStatus.created)
-    meetings.setdefault(str(right_id), []).append(right_meeting)
+    return left_meeting
 
 
 def update_meeting_status(

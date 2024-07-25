@@ -176,6 +176,15 @@ async def who_command(context: TContext, message: t.Message, user_id: int, **_kw
     await message.reply_markdown(text=response_text)
 
 
+@Command('more')
+@markdown_handler
+async def more_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> None:
+    more_meetings = db.get_user_meetings(context, user_id, statuses=models.MeetingStatus.more)
+    if more_meetings:
+        return messages.CANCEL_SUCCESS_MESSAGE
+    return messages.CANCEL_SUCCESS_MESSAGE
+
+
 @Command('add')
 @admin_handler
 async def add_command(context: TContext, message: t.Message, **_kwargs: tp.Any) -> str:
