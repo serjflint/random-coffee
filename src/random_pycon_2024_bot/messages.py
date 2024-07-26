@@ -68,6 +68,7 @@ HELP_SUCCESS_MESSAGE_RU = """
 Бот умеет следующее:
 /help - показать, что я умею
 /stop - отказаться от использования этого бота
+/more или /pyva - готов получить собеседника
 
 /who - список всех моих не закрытых встреч
 /all - список всех моих встреч
@@ -76,7 +77,6 @@ HELP_SUCCESS_MESSAGE_RU = """
 /reset login - держать встречу, как запланированную (все встречи такие по умолчанию).
     Это значит, что она будет отображаться в /who листе
 /deny login - встречи не было и не будет с login
-/interests - список интересов
 
 ВАЖНО! Если ты ПОДТВЕРДИЛ встречу (/pass), то это НЕЛЬЗЯ ОТКАТИТЬ. Мы против обмана и отказа от своих слов :)
 """
@@ -84,6 +84,7 @@ HELP_SUCCESS_MESSAGE_EN = """
 Bot commands:
 /help - list available commands
 /stop - stop using bot
+/more или /pyva - ready for meetings
 
 /who - list of my open meetings
 /all - list of all my meetings

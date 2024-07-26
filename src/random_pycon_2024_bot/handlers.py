@@ -177,10 +177,12 @@ async def who_command(context: TContext, message: t.Message, user_id: int, **_kw
 
 
 @Command('more')
+@Command('pyva')
 @markdown_handler
 async def more_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
-    left_id = user_id
+    left_id = str(user_id)
     more_meetings = db.get_user_meetings(context, left_id, statuses={models.MeetingStatus.more})
+    logger.info('Existing more meetings %s', more_meetings)
     if more_meetings:
         return messages.CANCEL_SUCCESS_MESSAGE
     left_meeting = db.add_meeting(context, left_id, left_id, status=models.MeetingStatus.more)
@@ -217,6 +219,17 @@ async def add_command(context: TContext, message: t.Message, **_kwargs: tp.Any) 
         left_id=db.get_login(context, left)['user_id'],
         right_id=db.get_login(context, right)['user_id'],
     )
+
+    return messages.CANCEL_SUCCESS_MESSAGE
+
+
+@Command('remove')
+@admin_handler
+async def remove_command(context: TContext, message: t.Message, **_kwargs: tp.Any) -> str:
+    username, *_ = utils.get_mentions(message)
+    user_id = db.get_login(context, username)['user_id']
+    db.remove_meetings(context, user_id=user_id)
+    logger.info('Now meetings are %s', db.get_user_meetings(context, user_id, models.ALL_MEETINGS))
 
     return messages.CANCEL_SUCCESS_MESSAGE
 

@@ -114,10 +114,19 @@ def add_meeting(
     right_id: int | str,
     status: models.MeetingStatus = models.MeetingStatus.created,
 ) -> models.CacheMeeting:
+    left_id, right_id = str(left_id), str(right_id)
     meetings = _get_meetings(context)
-    left_meeting = models.CacheMeeting(user_id=str(right_id), status=status)
-    meetings.setdefault(str(left_id), []).append(left_meeting)
+    left_meeting = models.CacheMeeting(user_id=right_id, status=status)
+    meetings.setdefault(left_id, []).append(left_meeting)
     return left_meeting
+
+
+def remove_meetings(
+    context: te.ContextTypes.DEFAULT_TYPE,
+    user_id: int | str,
+) -> None:
+    user_id = str(user_id)
+    _get_meetings(context)[user_id] = []
 
 
 def update_meeting_status(

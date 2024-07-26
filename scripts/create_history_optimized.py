@@ -24,7 +24,8 @@ def main():
         file_path = HISTORY_DIR / f'{idx}.txt'
         with file_path.open('w') as stream:
             write_pairs(idx, stream, users, user_pools, repeats)
-    print('Total repeats:', repeats.most_common(3))
+    most_repeats = [b for _, b in repeats.most_common(3)]
+    print('Most repeats:', most_repeats)
 
 
 def write_pairs(idx, stream, users, user_pools, repeats):

@@ -2,11 +2,14 @@ import collections
 import pathlib
 import random
 import string
+import time
 
-USERS_COUNT = 10000
-FILES_COUNT = 10
-USERNAME_LENGTH = 10
+USERS_COUNT = 1000
+FILES_COUNT = 100
+USERNAME_LENGTH = 100
+SLEEP = 0
 HISTORY_DIR = pathlib.Path(__file__).parent.parent / 'history'
+global_descriptors = []
 
 
 def get_random_name():
@@ -21,9 +24,12 @@ def main():
 
     for idx in range(FILES_COUNT):
         file_path = HISTORY_DIR / f'{idx}.txt'
-        with file_path.open('w') as stream:
-            write_pairs(idx, stream, users, user_pools, repeats)
-    print('Total repeats:', repeats.most_common(3))
+        stream = open(file_path, 'w', encoding='utf-8')
+        global_descriptors.append(stream)
+        time.sleep(SLEEP)
+        write_pairs(idx, stream, users, user_pools, repeats)
+    most_repeats = [b for _, b in repeats.most_common(3)]
+    print('Most repeats:', most_repeats)
 
 
 def write_pairs(idx, stream, users, user_pools, repeats):
@@ -69,6 +75,7 @@ def write_pairs(idx, stream, users, user_pools, repeats):
             repeats[right_user, left_user] += 1
         user_pools[left_user].discard(right_user)
         user_pools[right_user].discard(left_user)
+    # stream.close()
 
 
 if __name__ == '__main__':

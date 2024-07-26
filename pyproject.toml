@@ -59,4 +59,4 @@ warn_required_dynamic_aliases = true
 
 [tool.rye.scripts]
 devserver = "uvicorn src.random_pycon_2024_bot.app:app --reload --host 0.0.0.0"
-server = "granian --interface asgi src.random_pycon_2024_bot.app:app --reload --host 0.0.0.0"
+server = "granian --interface asgi src.random_pycon_2024_bot.app:app --host 0.0.0.0"
