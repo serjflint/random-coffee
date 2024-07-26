@@ -37,8 +37,12 @@ class RootController(ls.Controller):
         """For the health endpoint, reply with a simple plain text message."""
         return 'The bot is still running fine :)'
 
+    @ls.post('/parse')
+    async def parse(self, data: str) -> dict[str, str]:
+        return json.loads(data)[0]
+
     @ls.post('/parse_du')
-    async def dateutil(self, data: dict[str, str]) -> dict[str, str]:
+    async def dateutil(self, data: str) -> dict[str, str]:
         val = json.loads(data)[0]['datetime']
         res = dateutil.parser.parse(val)
         return {'datetime': str(res)}
