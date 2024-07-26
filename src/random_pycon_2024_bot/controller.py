@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import datetime
+import json
 import logging
 import typing as tp
 
+import dateutil.parser
 import litestar as ls
 from litestar import datastructures as ds
 import telegram as t
@@ -33,3 +36,15 @@ class RootController(ls.Controller):
     async def health(self) -> str:
         """For the health endpoint, reply with a simple plain text message."""
         return 'The bot is still running fine :)'
+
+    @ls.post('/parse_du')
+    async def dateutil(self, data: dict[str, str]) -> dict[str, str]:
+        val = json.loads(data)[0]['datetime']
+        res = dateutil.parser.parse(val)
+        return {'datetime': str(res)}
+
+    @ls.post('/parse_iso')
+    async def isoformat(self, data: str) -> dict[str, str]:
+        val = json.loads(data)[0]['datetime']
+        res = datetime.datetime.fromisoformat(val)
+        return {'datetime': str(res)}
