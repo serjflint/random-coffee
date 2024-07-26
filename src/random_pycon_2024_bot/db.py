@@ -8,6 +8,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 import telegram as t
 import telegram.ext as te
 
+from random_pycon_2024_bot import exceptions
 from random_pycon_2024_bot import models
 from random_pycon_2024_bot.utils import notnull
 
@@ -33,7 +34,10 @@ def _get_logins(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, models.Teleg
 
 
 def get_login(context: te.ContextTypes.DEFAULT_TYPE, username: str) -> models.TelegramUser:
-    return _get_logins(context)[username]
+    user = _get_logins(context).get(username)
+    if user is None:
+        msg = f'Unknown login: {username}'
+        raise exceptions.UnknownLoginError(msg)
 
 
 def _get_meetings(context: te.ContextTypes.DEFAULT_TYPE) -> dict[str, list[models.CacheMeeting]]:
@@ -58,6 +62,13 @@ def iter_meetings(
         if not get_user(context, user_id).get('enabled', False):
             yield (user_id, [])
         yield (user_id, get_user_meetings(context, user_id, statuses))
+
+
+def iter_users(context: te.ContextTypes.DEFAULT_TYPE) -> tp.Iterator[tuple[str, models.TelegramUser]]:
+    users = _get_users(context)
+    for user_id, user in users.items():
+        if user.get('enabled', False):
+            yield (user_id, user)
 
 
 def count_enabled_users(context: te.ContextTypes.DEFAULT_TYPE) -> int:

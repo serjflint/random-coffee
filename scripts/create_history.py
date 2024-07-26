@@ -5,9 +5,9 @@ import string
 import time
 
 USERS_COUNT = 1000
-FILES_COUNT = 100
-USERNAME_LENGTH = 100
-SLEEP = 0
+FILES_COUNT = 1000
+USERNAME_LENGTH = 10
+SLEEP = 1
 HISTORY_DIR = pathlib.Path(__file__).parent.parent / 'history'
 global_descriptors = []
 

@@ -266,6 +266,16 @@ Press here: /who to list them.
 All bot commands: /help
 To stop bot notifications: /stop
 """
+TELL_PEOPLE_THEY_HAVE_MASTERCLASS = 'TELL_PEOPLE_THEY_HAVE_MASTERCLASS'
+TELL_PEOPLE_THEY_HAVE_MASTERCLASS_RU = """
+Привет! У тебя есть мастер-класс!
+Чтобы отказаться от уведомлений этого бота, нажми сюда: /stop
+"""
+TELL_PEOPLE_THEY_HAVE_MASTERCLASS_EN = """
+Hi,
+you have master-class!
+To stop bot notifications: /stop
+"""
 
 ERROR_MESSAGE = 'ERROR_MESSAGE'
 ERROR_MESSAGE_RU = ERROR_MESSAGE_EN = """
@@ -463,6 +473,10 @@ MESSAGES: tp.Mapping[str, tp.Mapping[str, str]] = {
     TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS: {
         'en': TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS_EN,
         'ru': TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS_RU,
+    },
+    TELL_PEOPLE_THEY_HAVE_MASTERCLASS: {
+        'en': TELL_PEOPLE_THEY_HAVE_MASTERCLASS_EN,
+        'ru': TELL_PEOPLE_THEY_HAVE_MASTERCLASS_RU,
     },
 }
 

@@ -1,5 +1,6 @@
 import collections
 import enum
+import functools
 import pathlib
 import sys
 
@@ -19,11 +20,16 @@ def read_status():
     return ('done' * 100)[-4:]
 
 
+@functools.lru_cache(maxsize=100000)
+def cheap_cache(s: str) -> str:
+    return s
+
+
 for file in sorted(HISTORY_DIR.glob('*.txt')):
     with file.open('r') as stream:
         for line in stream:
             left_user, right_user = line.strip().split(',')
-            left_user, right_user = sys.intern(left_user), sys.intern(right_user)
+            left_user, right_user = cheap_cache(left_user), cheap_cache(right_user)
             left_meeting, right_meeting = (right_user, Enum(read_status())), (left_user, Enum(read_status()))
             meetings[left_user].append(left_meeting)
             meetings[right_user].append(right_meeting)

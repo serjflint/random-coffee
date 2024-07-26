@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import html
 import json
@@ -9,10 +10,12 @@ import uuid
 
 import telegram as t
 import telegram.constants as tc
+import telegram.error
 import telegram.ext as te
 from telegram.helpers import escape_markdown
 
 from random_pycon_2024_bot import db
+from random_pycon_2024_bot import exceptions
 from random_pycon_2024_bot import messages
 from random_pycon_2024_bot import models
 from random_pycon_2024_bot import utils
@@ -44,6 +47,8 @@ class Command:
 
 def default_handler(handler_command: tp.Callable) -> tp.Callable:  # type: ignore[type-arg]
     async def wrapper(update: t.Update, context: TContext) -> None:
+        if update.message is None:
+            return
         await handler_command(
             update=update,
             context=context,
@@ -265,16 +270,19 @@ async def leaderboard_command(context: TContext, **_kwargs: tp.Any) -> tuple[str
     return messages.LEADER_BOARD_MESSAGE, kwargs
 
 
-async def send_meeting(context: TContext, user_id: int | str, **_kwargs: tp.Any) -> None:
+async def send_meeting(
+    context: TContext,
+    user_id: int | str,
+    message: str = messages.TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS,
+    **_kwargs: tp.Any,
+) -> None:
     user_id = str(user_id)
     user = db.get_user(context, user_id)
     logger.info(user)
     if not user['enabled']:
         return
     lang_code = db.get_lang_code(context, user_id)
-    await context.bot.send_message(
-        chat_id=user_id, text=utils.get_message(messages.TELL_PEOPLE_THEY_HAVE_NEW_MEETINGS, lang_code)
-    )
+    await context.bot.send_message(chat_id=user_id, text=utils.get_message(message, lang_code))
 
 
 @Command('newround')
@@ -304,13 +312,23 @@ async def notifyall_command(context: TContext, **_kwargs: tp.Any) -> str:
     return messages.CANCEL_SUCCESS_MESSAGE
 
 
+@Command('callback')
+@admin_handler
+async def callback_command(context: TContext, **_kwargs: tp.Any) -> str:
+    for user_id, _ in db.iter_users(context):
+        with contextlib.suppress(telegram.error.Forbidden):
+            await send_meeting(context, user_id, message=messages.TELL_PEOPLE_THEY_HAVE_MASTERCLASS)
+
+    return messages.CANCEL_SUCCESS_MESSAGE
+
+
 @Command('pass', te.PrefixHandler)
 @markdown_handler
 async def pass_command(context: TContext, message: t.Message, user_id: int, **_kwargs: tp.Any) -> str:
     logger.info('Got a /pass command from %s', user_id)
     args = utils.get_command_args(message, command='pass')
     if not args:
-        return messages.HELP_UPDATE_STATUS_MESSAGE
+        return messages.HELP_UPDATE_STATUS_MESSAGE, {'command': 'pass'}
     right_login = args[0]
     left_id, right_id = user_id, db.get_login(context, right_login)['user_id']
     db.update_meeting_status(context, left_id, right_id, status=models.MeetingStatus.done)
@@ -415,6 +433,9 @@ async def error_handler(update: object, context: TContext) -> None:
     """Log the error and send a telegram message to notify the developer."""
     # Log the error before we do anything else, so we can see it even if something breaks.
     logger.error('Exception while handling an update:', exc_info=context.error)
+    if isinstance(context.error, exceptions.UnknownLoginError):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Unknown login: {context.error}')
+        return
 
     # traceback.format_exception returns the usual python message about an exception, but as a
     # list of strings rather than a single string, so we have to join them together.
